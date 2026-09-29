@@ -8,137 +8,244 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="My Tube">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" type="image/png" href="favicon.png">
-<title>U-tube-playlist</title>
+<meta name="apple-mobile-web-app-title" content="My Tube" id="appTitle">
+<link rel="manifest" href="manifest.json" id="manifest">
+<link rel="apple-touch-icon" href="icons/red-180.png" id="touchIcon">
+<link rel="icon" type="image/png" href="icons/red-192.png" id="favicon">
+<title>My Tube</title>
+<script>
+// Runs before anything else so the browser sees the right name/icon for this playlist.
+const COLORS = ['red','orange','yellow','green','teal','blue','purple','pink'];
+const Q = new URLSearchParams(location.search);
+const LIST = Q.get('list');
+const NAME = (Q.get('name') || 'My Tube').slice(0, 30);
+const COLOR = COLORS.includes(Q.get('c')) ? Q.get('c') : 'red';
+const BASE = new URL('./', location.href).href;
+const appUrl = (list, name, c) => BASE + '?list=' + encodeURIComponent(list) + '&name=' + encodeURIComponent(name) + '&c=' + c;
+if (LIST) {
+  document.title = NAME;
+  document.getElementById('appTitle').content = NAME;
+  document.getElementById('touchIcon').href = 'icons/' + COLOR + '-180.png';
+  document.getElementById('favicon').href = 'icons/' + COLOR + '-192.png';
+  const start = appUrl(LIST, NAME, COLOR);
+  const m = {
+    id: start, name: NAME, short_name: NAME, start_url: start, scope: BASE,
+    display: 'standalone', background_color: '#1d1526', theme_color: '#1d1526',
+    icons: [192, 512].map(n => ({ src: BASE + 'icons/' + COLOR + '-' + n + '.png', sizes: n + 'x' + n, type: 'image/png', purpose: 'any' }))
+  };
+  document.getElementById('manifest').href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' }));
+}
+</script>
 <style>
 :root{--bg:#1d1526;--panel:#2a2036;--line:#3d3050;--text:#f3ecf7;--muted:#a898b8;--amber:#f2b84b;--ink:#2a1a00}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);display:flex;flex-direction:column}
+body{background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
 [hidden]{display:none!important}
-main{flex:1;display:flex;flex-direction:column;max-width:900px;width:100%;margin:0 auto;padding:16px;gap:14px}
+main{max-width:900px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:1.3rem}
+h2{margin:0;font-size:1.05rem}
+.sub{color:var(--muted);font-size:.9rem;margin:0}
+.card{background:var(--panel);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px}
+label{font-weight:600;font-size:.95rem}
+input[type=text]{background:var(--bg);border:2px solid var(--line);color:var(--text);padding:12px;border-radius:10px;font:inherit;width:100%;margin-top:4px}
+input[type=text]:focus{outline:none;border-color:var(--amber)}
+button{font:inherit;cursor:pointer;color:var(--text);background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:10px 14px}
+button:focus-visible,a:focus-visible,.sw input:focus-visible+img{outline:3px solid var(--amber);outline-offset:2px}
+.big{background:var(--amber);border-color:var(--amber);color:var(--ink);font-weight:700;min-width:96px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.sw{position:relative}
+.sw input{position:absolute;opacity:0}
+.sw img{width:48px;height:48px;border-radius:12px;border:3px solid transparent;display:block;cursor:pointer}
+.sw input:checked+img{border-color:var(--amber)}
+.err{color:#ff9a8a;min-height:1.4em;margin:0;font-size:.9rem}
+.apps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.apps li{display:flex;align-items:center;gap:12px}
+.apps a{flex:1;display:flex;align-items:center;gap:12px;color:inherit;text-decoration:none;font-weight:600;padding:6px;border-radius:10px}
+.apps a:hover{background:var(--line)}
+.apps img{width:44px;height:44px;border-radius:10px}
+.apps .x{background:none;border:0;color:var(--muted);font-size:1.3rem;padding:4px 10px}
 .stage{aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden;position:relative}
 #player{position:absolute;inset:0;width:100%;height:100%}
-.cover{position:absolute;inset:0;display:grid;place-items:center;background:var(--bg);border:0;cursor:pointer;color:var(--text);font:inherit}
-.cover span{width:84px;height:84px;border-radius:50%;background:var(--amber);display:grid;place-items:center}
-.cover span::after{content:"";border-left:26px solid var(--ink);border-top:16px solid transparent;border-bottom:16px solid transparent;margin-left:6px}
-h1{margin:0;font-size:1.15rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sub{color:var(--muted);font-size:.9rem;margin:0}
-.bar{display:flex;gap:10px;justify-content:center;align-items:center}
-button{font:inherit;cursor:pointer;color:var(--text);background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:10px 14px}
-button:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
-.big{background:var(--amber);border-color:var(--amber);color:var(--ink);font-weight:700;min-width:96px}
+.cover{position:absolute;inset:0;display:grid;place-items:center;background:var(--bg);border:0;border-radius:0}
+.cover img{width:110px;height:110px;border-radius:24px}
+.bar{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
 .tog[aria-pressed="true"]{border-color:var(--amber);color:var(--amber)}
-.setup{background:var(--panel);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}
-input{background:var(--bg);border:2px solid var(--line);color:var(--text);padding:12px;border-radius:10px;font:inherit;width:100%}
-input:focus{outline:none;border-color:var(--amber)}
-.msg{color:#ff9a8a;min-height:1.5em;margin:0;font-size:.9rem}
+.nowt{margin:0;font-size:1.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.install{border:2px solid var(--amber)}
+.install .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .link{background:none;border:0;color:var(--muted);text-decoration:underline;padding:4px;align-self:center;font-size:.85rem}
 </style>
 </head>
 <body>
 <main>
-  <section class="setup" id="setup" hidden>
-    <h1>Choose your playlist</h1>
-    <p class="sub">Paste the YouTube playlist link once. The app remembers it.</p>
-    <input id="url" placeholder="https://www.youtube.com/playlist?list=…" autocomplete="off">
-    <button class="big" id="save">Save playlist</button>
-  </section>
 
-  <section id="app" hidden>
-    <div class="stage">
-      <div id="player"></div>
-      <button class="cover" id="cover" aria-label="Start playlist"><span></span></button>
+<!-- ============ HOME: create a playlist app ============ -->
+<section id="home" hidden>
+  <h1>My Tube</h1>
+  <div class="card">
+    <h2>Make a new playlist app</h2>
+    <div><label for="nm">Name under the icon</label><input type="text" id="nm" maxlength="30" placeholder="e.g. Chill songs"></div>
+    <div><label for="ln">YouTube playlist link</label><input type="text" id="ln" placeholder="https://www.youtube.com/playlist?list=…" autocomplete="off"></div>
+    <div><label>Icon color</label><div class="swatches" id="sws"></div></div>
+    <p class="err" id="err"></p>
+    <button class="big" id="create">Create app</button>
+  </div>
+  <div class="card" id="mine" hidden>
+    <h2>Your playlist apps</h2>
+    <ul class="apps" id="apps"></ul>
+  </div>
+</section>
+
+<!-- ============ PLAYER ============ -->
+<section id="app" hidden>
+  <div class="card install" id="install" hidden>
+    <h2 id="insTitle"></h2>
+    <p class="sub" id="insHow"></p>
+    <div class="row">
+      <button class="big" id="insBtn" hidden>Install</button>
+      <button id="insClose">Not now</button>
     </div>
-    <div style="margin:14px 0 10px">
-      <h1 id="title">Tap play to start</h1>
-      <p class="sub" id="pos">&nbsp;</p>
-    </div>
-    <div class="bar">
-      <button id="prev" aria-label="Previous">⏮</button>
-      <button class="big" id="pp">Play</button>
-      <button id="next" aria-label="Next">⏭</button>
-    </div>
-    <div class="bar" style="margin-top:10px">
-      <button class="tog" id="shuf" aria-pressed="false">Shuffle</button>
-      <button class="tog" id="loop" aria-pressed="true">Repeat all</button>
-    </div>
-    <p class="msg" id="msg"></p>
-    <button class="link" id="change">Change playlist</button>
-  </section>
+  </div>
+  <div class="stage">
+    <div id="player"></div>
+    <button class="cover" id="cover" aria-label="Start playlist"><img id="coverImg" alt=""></button>
+  </div>
+  <div>
+    <p class="nowt" id="title">Tap the icon to start</p>
+    <p class="sub" id="pos">&nbsp;</p>
+  </div>
+  <div class="bar">
+    <button id="prev" aria-label="Previous">⏮</button>
+    <button class="big" id="pp">Play</button>
+    <button id="next" aria-label="Next">⏭</button>
+  </div>
+  <div class="bar">
+    <button class="tog" id="shuf" aria-pressed="false">Shuffle</button>
+    <button class="tog" id="loop" aria-pressed="true">Repeat all</button>
+  </div>
+  <p class="err" id="msg"></p>
+  <a class="link" id="allLink" href="./">All playlist apps</a>
+</section>
+
 </main>
-
 <script>
-// Optional: hard-code your playlist here, e.g. const DEFAULT_LIST = 'PLxxxxxxxx';
-const DEFAULT_LIST = '';
-
 const $ = id => document.getElementById(id);
-const store = { get:k=>{try{return localStorage.getItem(k)}catch{return null}}, set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}} };
-let player, playing = false, shuffle = store.get('shuf') === '1', loop = ['off','all','one'].includes(store.get('rep')) ? store.get('rep') : 'all', curIdx = 0;
+const store = { get:(k,d)=>{try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch{return d}},
+                set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}} };
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+if(location.protocol === 'file:') alert('Open this from its web address, not as a file — YouTube blocks files (error 153).');
 
 function listFrom(s){
   s = (s||'').trim();
   if(/^(PL|UU|OL|RD|FL|LL)[\w-]{10,}$/.test(s)) return s;
   try { return new URL(s.startsWith('http') ? s : 'https://' + s).searchParams.get('list'); } catch { return null; }
 }
-const LIST = new URLSearchParams(location.search).get('list') || store.get('list') || DEFAULT_LIST;
 
-if(location.protocol === 'file:') $('msg').textContent = 'Opened as a local file, so YouTube will show error 153. Open it from a web address instead.';
+/* ---------- HOME ---------- */
+function home(){
+  $('home').hidden = false;
+  $('sws').innerHTML = COLORS.map((c,i) =>
+    `<label class="sw"><input type="radio" name="c" value="${c}" ${i?'':'checked'} aria-label="${c}"><img src="icons/${c}-180.png" alt=""></label>`).join('');
+  renderApps();
+  $('create').onclick = () => {
+    const name = $('nm').value.trim(), list = listFrom($('ln').value);
+    if(!name){ $('err').textContent = 'Type a name for the icon.'; $('nm').focus(); return; }
+    if(!list){ $('err').textContent = 'That link has no playlist in it. Copy the link from the playlist page.'; $('ln').focus(); return; }
+    const c = document.querySelector('input[name=c]:checked').value;
+    const apps = store.get('apps', []).filter(a => a.list !== list);
+    apps.unshift({list, name, c}); store.set('apps', apps);
+    location.href = appUrl(list, name, c);
+  };
+}
+function renderApps(){
+  const apps = store.get('apps', []);
+  $('mine').hidden = !apps.length;
+  $('apps').innerHTML = '';
+  apps.forEach((a,i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<a href="${appUrl(a.list,a.name,a.c)}"><img src="icons/${a.c}-180.png" alt=""><span></span></a><button class="x" aria-label="Remove">×</button>`;
+    li.querySelector('span').textContent = a.name;
+    li.querySelector('.x').onclick = () => { const l = store.get('apps',[]); l.splice(i,1); store.set('apps',l); renderApps(); };
+    $('apps').appendChild(li);
+  });
+}
 
-if(!LIST){ $('setup').hidden = false; } else { $('app').hidden = false; loadAPI(); }
+/* ---------- PLAYER ---------- */
+let player, playing = false, curIdx = 0;
+const K = 'set:' + LIST;
+let st = store.get(K, {shuffle:false, rep:'all'});
+const saveSt = () => store.set(K, st);
 
-$('save').onclick = () => {
-  const l = listFrom($('url').value);
-  if(!l){ $('url').focus(); $('url').placeholder = 'That link has no playlist. Copy it from the playlist page.'; $('url').value=''; return; }
-  store.set('list', l); location.search = '';
-};
-$('change').onclick = () => { store.set('list',''); location.href = location.pathname; };
-
-function loadAPI(){
+function app(){
+  $('app').hidden = false;
+  $('coverImg').src = 'icons/' + COLOR + '-512.png';
+  $('allLink').hidden = standalone;
+  if(!standalone && !store.get('dismiss:' + LIST, false)) showInstall();
   const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
 }
+
+let deferred;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; $('insBtn').hidden = false; });
+function showInstall(){
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  $('install').hidden = false;
+  $('insTitle').textContent = 'Put “' + NAME + '” on your home screen';
+  $('insHow').textContent = ios
+    ? 'In Safari, tap Share, then “Add to Home Screen”.'
+    : 'Tap Install below. If there is no Install button, open the browser menu (⋮) and choose “Add to Home screen” or “Install app”.';
+  $('insBtn').onclick = async () => { if(!deferred) return; deferred.prompt(); await deferred.userChoice; deferred = null; $('insBtn').hidden = true; };
+  $('insClose').onclick = () => { $('install').hidden = true; store.set('dismiss:' + LIST, true); };
+}
+addEventListener('appinstalled', () => { $('install').hidden = true; });
+
 window.onYouTubeIframeAPIReady = () => {
-  const vars = { listType:'playlist', list:LIST, playsinline:1, rel:0, modestbranding:1 };
+  const vars = { listType:'playlist', list:LIST, playsinline:1, rel:0 };
   if(location.protocol.startsWith('http')){ vars.origin = location.origin; vars.widget_referrer = location.href; }
   player = new YT.Player('player', { playerVars: vars, events: {
-    onReady: () => { player.setLoop(loop !== 'off'); if(shuffle) player.setShuffle(true); sync(); },
+    onReady: () => { player.setLoop(st.rep !== 'off'); if(st.shuffle) player.setShuffle(true); sync(); },
     onStateChange: e => {
       playing = e.data === YT.PlayerState.PLAYING;
-      if(playing) curIdx = player.getPlaylistIndex();
-      if(e.data === YT.PlayerState.ENDED && loop === 'one'){ player.playVideoAt(curIdx); return; }
-      if(playing) $('cover').hidden = true;
+      if(playing){ $('cover').hidden = true; curIdx = player.getPlaylistIndex(); }
+      if(e.data === YT.PlayerState.ENDED && st.rep === 'one'){ player.playVideoAt(curIdx); return; }
       sync();
     },
-    onError: e => { $('msg').textContent = 'A video was skipped (error ' + e.data + ').'; setTimeout(()=>player.nextVideo(), 1200); }
+    onError: e => {
+      $('msg').textContent = e.data === 150 || e.data === 101 || e.data === 100
+        ? 'A video was skipped (private or not allowed to play outside YouTube).'
+        : 'A video was skipped (error ' + e.data + ').';
+      setTimeout(() => player.nextVideo(), 1200);
+    }
   }});
 };
 
 function sync(){
   $('pp').textContent = playing ? 'Pause' : 'Play';
-  $('shuf').setAttribute('aria-pressed', shuffle); $('loop').setAttribute('aria-pressed', loop !== 'off'); $('loop').textContent = {off:'Repeat off', all:'Repeat all', one:'Repeat one'}[loop];
+  $('shuf').setAttribute('aria-pressed', st.shuffle);
+  $('loop').setAttribute('aria-pressed', st.rep !== 'off');
+  $('loop').textContent = {off:'Repeat off', all:'Repeat all', one:'Repeat one'}[st.rep];
   if(!player || !player.getVideoData) return;
   const d = player.getVideoData(), pl = player.getPlaylist() || [];
-  if(d && d.title){ $('title').textContent = d.title; document.title = "U-tube-playlist"; }
+  if(d && d.title) $('title').textContent = d.title;
   if(pl.length) $('pos').textContent = (player.getPlaylistIndex()+1) + ' of ' + pl.length;
   if('mediaSession' in navigator && d && d.title){
-    navigator.mediaSession.metadata = new MediaMetadata({ title:d.title, artist:d.author||'', artwork:[{src:'https://i.ytimg.com/vi/'+d.video_id+'/hqdefault.jpg',sizes:'480x360',type:'image/jpeg'}] });
+    navigator.mediaSession.metadata = new MediaMetadata({ title:d.title, artist:NAME,
+      artwork:[{src:'https://i.ytimg.com/vi/'+d.video_id+'/hqdefault.jpg', sizes:'480x360', type:'image/jpeg'}] });
   }
 }
-const start = () => { if(player && player.playVideo){ player.playVideo(); } };
+const start = () => player && player.playVideo && player.playVideo();
 $('cover').onclick = start;
 $('pp').onclick = () => { if(!player) return; playing ? player.pauseVideo() : start(); };
 $('next').onclick = () => player && player.nextVideo();
 $('prev').onclick = () => player && player.previousVideo();
-$('shuf').onclick = () => { shuffle = !shuffle; store.set('shuf', shuffle?'1':'0'); player && player.setShuffle(shuffle); if(shuffle && player) player.playVideoAt(0); sync(); };
-$('loop').onclick = () => { loop = {off:'all', all:'one', one:'off'}[loop]; store.set('rep', loop); player && player.setLoop(loop !== 'off'); sync(); };
+$('shuf').onclick = () => { st.shuffle = !st.shuffle; saveSt(); if(player){ player.setShuffle(st.shuffle); if(st.shuffle) player.playVideoAt(0); } sync(); };
+$('loop').onclick = () => { st.rep = {off:'all', all:'one', one:'off'}[st.rep]; saveSt(); player && player.setLoop(st.rep !== 'off'); sync(); };
 if('mediaSession' in navigator){
   navigator.mediaSession.setActionHandler('nexttrack', () => player && player.nextVideo());
   navigator.mediaSession.setActionHandler('previoustrack', () => player && player.previousVideo());
 }
+
+LIST ? app() : home();
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#1d1526">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Tube">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<title>U-tube-playlist</title>
+<style>
+:root{--bg:#1d1526;--panel:#2a2036;--line:#3d3050;--text:#f3ecf7;--muted:#a898b8;--amber:#f2b84b;--ink:#2a1a00}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);display:flex;flex-direction:column}
+[hidden]{display:none!important}
+main{flex:1;display:flex;flex-direction:column;max-width:900px;width:100%;margin:0 auto;padding:16px;gap:14px}
+.stage{aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden;position:relative}
+#player{position:absolute;inset:0;width:100%;height:100%}
+.cover{position:absolute;inset:0;display:grid;place-items:center;background:var(--bg);border:0;cursor:pointer;color:var(--text);font:inherit}
+.cover span{width:84px;height:84px;border-radius:50%;background:var(--amber);display:grid;place-items:center}
+.cover span::after{content:"";border-left:26px solid var(--ink);border-top:16px solid transparent;border-bottom:16px solid transparent;margin-left:6px}
+h1{margin:0;font-size:1.15rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{color:var(--muted);font-size:.9rem;margin:0}
+.bar{display:flex;gap:10px;justify-content:center;align-items:center}
+button{font:inherit;cursor:pointer;color:var(--text);background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:10px 14px}
+button:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.big{background:var(--amber);border-color:var(--amber);color:var(--ink);font-weight:700;min-width:96px}
+.tog[aria-pressed="true"]{border-color:var(--amber);color:var(--amber)}
+.setup{background:var(--panel);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}
+input{background:var(--bg);border:2px solid var(--line);color:var(--text);padding:12px;border-radius:10px;font:inherit;width:100%}
+input:focus{outline:none;border-color:var(--amber)}
+.msg{color:#ff9a8a;min-height:1.5em;margin:0;font-size:.9rem}
+.link{background:none;border:0;color:var(--muted);text-decoration:underline;padding:4px;align-self:center;font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+  <section class="setup" id="setup" hidden>
+    <h1>Choose your playlist</h1>
+    <p class="sub">Paste the YouTube playlist link once. The app remembers it.</p>
+    <input id="url" placeholder="https://www.youtube.com/playlist?list=…" autocomplete="off">
+    <button class="big" id="save">Save playlist</button>
+  </section>
+
+  <section id="app" hidden>
+    <div class="stage">
+      <div id="player"></div>
+      <button class="cover" id="cover" aria-label="Start playlist"><span></span></button>
+    </div>
+    <div style="margin:14px 0 10px">
+      <h1 id="title">Tap play to start</h1>
+      <p class="sub" id="pos">&nbsp;</p>
+    </div>
+    <div class="bar">
+      <button id="prev" aria-label="Previous">⏮</button>
+      <button class="big" id="pp">Play</button>
+      <button id="next" aria-label="Next">⏭</button>
+    </div>
+    <div class="bar" style="margin-top:10px">
+      <button class="tog" id="shuf" aria-pressed="false">Shuffle</button>
+      <button class="tog" id="loop" aria-pressed="true">Repeat</button>
+    </div>
+    <p class="msg" id="msg"></p>
+    <button class="link" id="change">Change playlist</button>
+  </section>
+</main>
+
+<script>
+// Optional: hard-code your playlist here, e.g. const DEFAULT_LIST = 'PLxxxxxxxx';
+const DEFAULT_LIST = '';
+
+const $ = id => document.getElementById(id);
+const store = { get:k=>{try{return localStorage.getItem(k)}catch{return null}}, set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}} };
+let player, playing = false, shuffle = store.get('shuf') === '1', loop = store.get('loop') !== '0';
+
+function listFrom(s){
+  s = (s||'').trim();
+  if(/^(PL|UU|OL|RD|FL|LL)[\w-]{10,}$/.test(s)) return s;
+  try { return new URL(s.startsWith('http') ? s : 'https://' + s).searchParams.get('list'); } catch { return null; }
+}
+const LIST = new URLSearchParams(location.search).get('list') || store.get('list') || DEFAULT_LIST;
+
+if(location.protocol === 'file:') $('msg').textContent = 'Opened as a local file, so YouTube will show error 153. Open it from a web address instead.';
+
+if(!LIST){ $('setup').hidden = false; } else { $('app').hidden = false; loadAPI(); }
+
+$('save').onclick = () => {
+  const l = listFrom($('url').value);
+  if(!l){ $('url').focus(); $('url').placeholder = 'That link has no playlist. Copy it from the playlist page.'; $('url').value=''; return; }
+  store.set('list', l); location.search = '';
+};
+$('change').onclick = () => { store.set('list',''); location.href = location.pathname; };
+
+function loadAPI(){
+  const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
+}
+window.onYouTubeIframeAPIReady = () => {
+  const vars = { listType:'playlist', list:LIST, playsinline:1, rel:0, modestbranding:1 };
+  if(location.protocol.startsWith('http')){ vars.origin = location.origin; vars.widget_referrer = location.href; }
+  player = new YT.Player('player', { playerVars: vars, events: {
+    onReady: () => { player.setLoop(loop); if(shuffle) player.setShuffle(true); sync(); },
+    onStateChange: e => {
+      playing = e.data === YT.PlayerState.PLAYING;
+      if(playing) $('cover').hidden = true;
+      sync();
+    },
+    onError: e => { $('msg').textContent = 'A video was skipped (error ' + e.data + ').'; setTimeout(()=>player.nextVideo(), 1200); }
+  }});
+};
+
+function sync(){
+  $('pp').textContent = playing ? 'Pause' : 'Play';
+  $('shuf').setAttribute('aria-pressed', shuffle); $('loop').setAttribute('aria-pressed', loop);
+  if(!player || !player.getVideoData) return;
+  const d = player.getVideoData(), pl = player.getPlaylist() || [];
+  if(d && d.title){ $('title').textContent = d.title; document.title = "U-tube-playlist"; }
+  if(pl.length) $('pos').textContent = (player.getPlaylistIndex()+1) + ' of ' + pl.length;
+  if('mediaSession' in navigator && d && d.title){
+    navigator.mediaSession.metadata = new MediaMetadata({ title:d.title, artist:d.author||'', artwork:[{src:'https://i.ytimg.com/vi/'+d.video_id+'/hqdefault.jpg',sizes:'480x360',type:'image/jpeg'}] });
+  }
+}
+const start = () => { if(player && player.playVideo){ player.playVideo(); } };
+$('cover').onclick = start;
+$('pp').onclick = () => { if(!player) return; playing ? player.pauseVideo() : start(); };
+$('next').onclick = () => player && player.nextVideo();
+$('prev').onclick = () => player && player.previousVideo();
+$('shuf').onclick = () => { shuffle = !shuffle; store.set('shuf', shuffle?'1':'0'); player && player.setShuffle(shuffle); if(shuffle && player) player.playVideoAt(0); sync(); };
+$('loop').onclick = () => { loop = !loop; store.set('loop', loop?'1':'0'); player && player.setLoop(loop); sync(); };
+if('mediaSession' in navigator){
+  navigator.mediaSession.setActionHandler('nexttrack', () => player && player.nextVideo());
+  navigator.mediaSession.setActionHandler('previoustrack', () => player && player.previousVideo());
+}
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>

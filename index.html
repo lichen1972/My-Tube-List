@@ -253,12 +253,20 @@ function home(){
   let editing = false;
   $('editBtn').onclick = () => { editing = !editing; $('editBtn').textContent = editing ? 'Done' : 'Edit'; renderTiles(editing); };
   renderTiles(false);
-  // iPhone home-screen apps sometimes refuse to open the keyboard: fall back to a pop-up box
+  // iPhone home-screen apps often won't open the keyboard in a text box,
+  // so there we use the phone's own pop-up input box instead (always works).
+  const iosApp = standalone && (/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
   [['nm','Name under the icon'],['ln','YouTube playlist link']].forEach(([id,label]) => {
     const el = $(id);
-    el.addEventListener('click', () => setTimeout(() => {
-      if(document.activeElement !== el){ const v = prompt(label, el.value); if(v !== null) el.value = v.trim(); }
-    }, 350));
+    if(iosApp){
+      el.readOnly = true;
+      el.placeholder = 'Tap to type';
+      el.addEventListener('click', () => { const v = prompt(label, el.value); if(v !== null) el.value = v.trim(); });
+    } else {
+      el.addEventListener('click', () => setTimeout(() => {
+        if(document.activeElement !== el){ const v = prompt(label, el.value); if(v !== null) el.value = v.trim(); }
+      }, 350));
+    }
   });
   $('pasteBtn').onclick = async () => {
     try{ const t = await navigator.clipboard.readText(); if(t) $('ln').value = t.trim(); }

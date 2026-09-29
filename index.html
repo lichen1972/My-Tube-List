@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="My Tube" id="appTitle">
 <link rel="manifest" href="manifest.json" id="manifest">
-<link rel="apple-touch-icon" href="icons/red-180.png" id="touchIcon">
-<link rel="icon" type="image/png" href="icons/red-192.png" id="favicon">
+<link rel="apple-touch-icon" href="red-180.png" id="touchIcon">
+<link rel="icon" type="image/png" href="red-192.png" id="favicon">
 <title>My Tube</title>
 <script>
 // Runs before anything else so the browser sees the right name/icon for this playlist.
@@ -25,13 +25,13 @@ const appUrl = (list, name, c) => BASE + '?list=' + encodeURIComponent(list) + '
 if (LIST) {
   document.title = NAME;
   document.getElementById('appTitle').content = NAME;
-  document.getElementById('touchIcon').href = 'icons/' + COLOR + '-180.png';
-  document.getElementById('favicon').href = 'icons/' + COLOR + '-192.png';
+  document.getElementById('touchIcon').href = '' + COLOR + '-180.png';
+  document.getElementById('favicon').href = '' + COLOR + '-192.png';
   const start = appUrl(LIST, NAME, COLOR);
   const m = {
     id: start, name: NAME, short_name: NAME, start_url: start, scope: BASE,
     display: 'standalone', background_color: '#1d1526', theme_color: '#1d1526',
-    icons: [192, 512].map(n => ({ src: BASE + 'icons/' + COLOR + '-' + n + '.png', sizes: n + 'x' + n, type: 'image/png', purpose: 'any' }))
+    icons: [192, 512].map(n => ({ src: BASE + '' + COLOR + '-' + n + '.png', sizes: n + 'x' + n, type: 'image/png', purpose: 'any' }))
   };
   document.getElementById('manifest').href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' }));
 }
@@ -146,7 +146,7 @@ function listFrom(s){
 function home(){
   $('home').hidden = false;
   $('sws').innerHTML = COLORS.map((c,i) =>
-    `<label class="sw"><input type="radio" name="c" value="${c}" ${i?'':'checked'} aria-label="${c}"><img src="icons/${c}-180.png" alt=""></label>`).join('');
+    `<label class="sw"><input type="radio" name="c" value="${c}" ${i?'':'checked'} aria-label="${c}"><img src="${c}-180.png" alt=""></label>`).join('');
   renderApps();
   $('create').onclick = () => {
     const name = $('nm').value.trim(), list = listFrom($('ln').value);
@@ -164,7 +164,7 @@ function renderApps(){
   $('apps').innerHTML = '';
   apps.forEach((a,i) => {
     const li = document.createElement('li');
-    li.innerHTML = `<a href="${appUrl(a.list,a.name,a.c)}"><img src="icons/${a.c}-180.png" alt=""><span></span></a><button class="x" aria-label="Remove">×</button>`;
+    li.innerHTML = `<a href="${appUrl(a.list,a.name,a.c)}"><img src="${a.c}-180.png" alt=""><span></span></a><button class="x" aria-label="Remove">×</button>`;
     li.querySelector('span').textContent = a.name;
     li.querySelector('.x').onclick = () => { const l = store.get('apps',[]); l.splice(i,1); store.set('apps',l); renderApps(); };
     $('apps').appendChild(li);
@@ -179,7 +179,7 @@ const saveSt = () => store.set(K, st);
 
 function app(){
   $('app').hidden = false;
-  $('coverImg').src = 'icons/' + COLOR + '-512.png';
+  $('coverImg').src = '' + COLOR + '-512.png';
   $('allLink').hidden = standalone;
   if(!standalone && !store.get('dismiss:' + LIST, false)) showInstall();
   const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);

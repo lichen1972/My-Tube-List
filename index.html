@@ -154,6 +154,9 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
 .sw input:focus-visible+img{box-shadow:0 0 0 2px var(--ink),0 0 0 4px var(--accent)}
 .cta{width:100%;border-radius:14px;padding:15px;background:var(--text);color:var(--ink);font-weight:700;font-size:1rem;margin-top:6px}
 .err{color:#ffb4a8;font-size:.85rem;min-height:1.3em;margin:0 0 6px}
+.cta.alt{background:transparent;color:var(--text);border:1px solid var(--line)}
+.note{color:var(--muted);font-size:.85rem;margin:12px 0 0;line-height:1.5}
+.note b{color:var(--text)}
 .edit{float:right;color:var(--muted);font-size:.85rem;font-weight:500;margin-top:6px}
 </style>
 </head>
@@ -167,6 +170,7 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
   <div id="mine" hidden>
     <button class="edit" id="editBtn">Edit</button>
     <h2 style="font-size:1.05rem;margin:0 0 14px">Your playlists</h2>
+    <p class="note" id="editNote" hidden>Lists shared to all devices are removed by deleting their line in <b>lists.txt</b> on GitHub.</p>
     <div class="tiles" id="tiles"></div>
   </div>
   <section class="form">
@@ -175,7 +179,9 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
     <div class="field"><label for="ln">YouTube playlist link</label><div class="inrow"><input type="text" id="ln" placeholder="Paste the playlist link" autocomplete="off"><button class="paste" id="pasteBtn" type="button">Paste</button></div></div>
     <div class="field"><label>Icon color</label><div class="swatches" id="sws"></div></div>
     <p class="err" id="err"></p>
-    <button class="cta" id="create">Create app</button>
+    <button class="cta" id="create">Create on this device</button>
+    <button class="cta alt" id="share">Add to all my devices</button>
+    <p class="note" id="shareMsg" hidden>Line copied. On the GitHub page that opened, tap at the end of the list, start a new line, paste, then tap <b>Commit changes</b>. Every device shows it within about 10 minutes.</p>
   </section>
 </main>
 
@@ -258,21 +264,58 @@ function home(){
     try{ const t = await navigator.clipboard.readText(); if(t) $('ln').value = t.trim(); }
     catch{ const v = prompt('YouTube playlist link', $('ln').value); if(v !== null) $('ln').value = v.trim(); }
   };
-  $('create').onclick = () => {
+  const read = () => {
     const name = $('nm').value.trim(), list = listFrom($('ln').value);
-    if(!name){ $('err').textContent = 'Give it a name for the icon.'; $('nm').focus(); return; }
-    if(!list){ $('err').textContent = 'That link has no playlist in it. Copy the link from the playlist page.'; $('ln').focus(); return; }
-    const c = document.querySelector('input[name=c]:checked').value;
-    const apps = store.get('apps', []).filter(a => a.list !== list);
-    apps.push({list, name, c}); store.set('apps', apps);
-    location.href = appUrl(list, name, c) + '&from=home';
+    if(!name){ $('err').textContent = 'Give it a name for the icon.'; return null; }
+    if(!list){ $('err').textContent = 'That link has no playlist in it. Copy the link from the playlist page.'; return null; }
+    $('err').textContent = '';
+    return {name, list, c: document.querySelector('input[name=c]:checked').value};
   };
+  $('create').onclick = () => {
+    const a = read(); if(!a) return;
+    const apps = store.get('apps', []).filter(x => x.list !== a.list);
+    apps.push(a); store.set('apps', apps);
+    location.href = appUrl(a.list, a.name, a.c) + '&from=home';
+  };
+  $('share').onclick = async () => {
+    const a = read(); if(!a) return;
+    const line = a.name + ' | ' + a.c + ' | https://www.youtube.com/playlist?list=' + a.list;
+    try{ await navigator.clipboard.writeText(line); }catch{ prompt('Copy this line:', line); }
+    $('err').textContent = '';
+    $('shareMsg').hidden = false;
+    window.open(GH_EDIT, '_blank');
+  };
+  loadShared();
 }
+
+// ---- shared lists: lists.txt in the GitHub repo, read by every device ----
+const GH_USER = location.hostname.split('.')[0];
+const GH_REPO = location.pathname.split('/')[1] || '';
+const GH_EDIT = 'https://github.com/' + GH_USER + '/' + GH_REPO + '/edit/main/lists.txt';
+let shared = store.get('sharedCache', []);
+async function loadShared(){
+  try{
+    const r = await fetch('lists.txt?t=' + Date.now(), {cache:'no-store'});
+    if(!r.ok) throw 0;
+    shared = (await r.text()).split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#')).map(l => {
+      const p = l.split('|').map(x => x.trim());
+      const link = p[p.length-1], name = p[0], c = p.length > 2 && COLORS[p[1].toLowerCase()] ? p[1].toLowerCase() : 'red';
+      const list = listFrom(link);
+      return list && name ? {name: name.slice(0,30), list, c, s:true} : null;
+    }).filter(Boolean);
+    store.set('sharedCache', shared);
+  }catch{}
+  renderTiles(false);
+}
+
 function renderTiles(editing){
-  const apps = store.get('apps', []);
+  const local = store.get('apps', []);
+  const ids = new Set(shared.map(a => a.list));
+  const apps = [...shared, ...local.map((a,i) => ({...a, i})).filter(a => !ids.has(a.list))];
   $('mine').hidden = !apps.length;
-  $('tiles').innerHTML = apps.map((a,i) =>
-    `<a class="tile" href="${appUrl(a.list,a.name,a.c)}&from=home"><img src="${a.c}-180.png" alt=""><span>${esc(a.name)}</span>${editing?`<button class="x" data-i="${i}" aria-label="Remove ${esc(a.name)}">✕</button>`:''}</a>`).join('');
+  $('editNote').hidden = !editing || !shared.length;
+  $('tiles').innerHTML = apps.map(a =>
+    `<a class="tile" href="${appUrl(a.list,a.name,a.c)}&from=home"><img src="${a.c}-180.png" alt=""><span>${esc(a.name)}</span>${editing && !a.s ? `<button class="x" data-i="${a.i}" aria-label="Remove ${esc(a.name)}">✕</button>`:''}</a>`).join('');
   $('tiles').querySelectorAll('.x').forEach(b => b.onclick = e => {
     e.preventDefault(); const l = store.get('apps',[]); l.splice(+b.dataset.i,1); store.set('apps',l); renderTiles(true);
   });

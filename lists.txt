@@ -1,0 +1,5 @@
+# My Tube – playlists shown on every device
+# One playlist per line:   Name | color | playlist link
+# Colors: red, orange, yellow, green, teal, blue, purple, pink
+# Lines starting with # are ignored.
+

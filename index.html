@@ -251,14 +251,14 @@ function home(){
     const c = document.querySelector('input[name=c]:checked').value;
     const apps = store.get('apps', []).filter(a => a.list !== list);
     apps.push({list, name, c}); store.set('apps', apps);
-    location.href = appUrl(list, name, c);
+    location.href = appUrl(list, name, c) + '&from=home';
   };
 }
 function renderTiles(editing){
   const apps = store.get('apps', []);
   $('mine').hidden = !apps.length;
   $('tiles').innerHTML = apps.map((a,i) =>
-    `<a class="tile" href="${appUrl(a.list,a.name,a.c)}"><img src="${a.c}-180.png" alt=""><span>${esc(a.name)}</span>${editing?`<button class="x" data-i="${i}" aria-label="Remove ${esc(a.name)}">✕</button>`:''}</a>`).join('');
+    `<a class="tile" href="${appUrl(a.list,a.name,a.c)}&from=home"><img src="${a.c}-180.png" alt=""><span>${esc(a.name)}</span>${editing?`<button class="x" data-i="${i}" aria-label="Remove ${esc(a.name)}">✕</button>`:''}</a>`).join('');
   $('tiles').querySelectorAll('.x').forEach(b => b.onclick = e => {
     e.preventDefault(); const l = store.get('apps',[]); l.splice(+b.dataset.i,1); store.set('apps',l); renderTiles(true);
   });
@@ -279,12 +279,13 @@ function app(){
   $('homeBtn').hidden = false;
   $('poster').src = COLOR + '-512.png';
   if(!standalone && !store.get('dismiss:' + LIST, false)) showInstall();
+  else if(standalone && Q.get('from') === 'home' && !store.get('dismiss:' + LIST, false)) showCopy();
   const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
   sync();
 }
 
 let deferred;
-addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; $('insBtn').hidden = false; });
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; if(!standalone) $('insBtn').hidden = false; });
 function showInstall(){
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   $('install').hidden = false;
@@ -293,6 +294,20 @@ function showInstall(){
   $('insHow').textContent = ios ? 'Tap Share in Safari, then “Add to Home Screen”.'
                                 : 'Tap Install, or use the browser menu ⋮ → “Add to Home screen”.';
   $('insBtn').onclick = async () => { if(!deferred) return; deferred.prompt(); await deferred.userChoice; deferred = null; $('insBtn').hidden = true; };
+  $('insClose').onclick = () => { $('install').hidden = true; store.set('dismiss:' + LIST, true); };
+}
+function showCopy(){
+  const safari = /iphone|ipad|ipod/i.test(navigator.userAgent) ? 'Safari' : 'Chrome';
+  const link = appUrl(LIST, NAME, COLOR);
+  $('install').hidden = false;
+  $('insIcon').src = COLOR + '-180.png';
+  $('insTitle').textContent = 'Want “' + NAME + '” as its own icon?';
+  $('insHow').textContent = 'Copy the link, paste it into ' + safari + ', then add it to your home screen from there.';
+  $('insBtn').hidden = false; $('insBtn').textContent = 'Copy link';
+  $('insBtn').onclick = async () => {
+    try{ await navigator.clipboard.writeText(link); $('insBtn').textContent = 'Copied ✓'; }
+    catch{ prompt('Copy this link:', link); }
+  };
   $('insClose').onclick = () => { $('install').hidden = true; store.set('dismiss:' + LIST, true); };
 }
 addEventListener('appinstalled', () => { $('install').hidden = true; });

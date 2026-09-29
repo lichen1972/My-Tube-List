@@ -65,7 +65,7 @@ input:focus{outline:none;border-color:var(--amber)}
     </div>
     <div class="bar" style="margin-top:10px">
       <button class="tog" id="shuf" aria-pressed="false">Shuffle</button>
-      <button class="tog" id="loop" aria-pressed="true">Repeat</button>
+      <button class="tog" id="loop" aria-pressed="true">Repeat all</button>
     </div>
     <p class="msg" id="msg"></p>
     <button class="link" id="change">Change playlist</button>
@@ -78,7 +78,7 @@ const DEFAULT_LIST = '';
 
 const $ = id => document.getElementById(id);
 const store = { get:k=>{try{return localStorage.getItem(k)}catch{return null}}, set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}} };
-let player, playing = false, shuffle = store.get('shuf') === '1', loop = store.get('loop') !== '0';
+let player, playing = false, shuffle = store.get('shuf') === '1', loop = ['off','all','one'].includes(store.get('rep')) ? store.get('rep') : 'all', curIdx = 0;
 
 function listFrom(s){
   s = (s||'').trim();
@@ -105,9 +105,11 @@ window.onYouTubeIframeAPIReady = () => {
   const vars = { listType:'playlist', list:LIST, playsinline:1, rel:0, modestbranding:1 };
   if(location.protocol.startsWith('http')){ vars.origin = location.origin; vars.widget_referrer = location.href; }
   player = new YT.Player('player', { playerVars: vars, events: {
-    onReady: () => { player.setLoop(loop); if(shuffle) player.setShuffle(true); sync(); },
+    onReady: () => { player.setLoop(loop !== 'off'); if(shuffle) player.setShuffle(true); sync(); },
     onStateChange: e => {
       playing = e.data === YT.PlayerState.PLAYING;
+      if(playing) curIdx = player.getPlaylistIndex();
+      if(e.data === YT.PlayerState.ENDED && loop === 'one'){ player.playVideoAt(curIdx); return; }
       if(playing) $('cover').hidden = true;
       sync();
     },
@@ -117,7 +119,7 @@ window.onYouTubeIframeAPIReady = () => {
 
 function sync(){
   $('pp').textContent = playing ? 'Pause' : 'Play';
-  $('shuf').setAttribute('aria-pressed', shuffle); $('loop').setAttribute('aria-pressed', loop);
+  $('shuf').setAttribute('aria-pressed', shuffle); $('loop').setAttribute('aria-pressed', loop !== 'off'); $('loop').textContent = {off:'Repeat off', all:'Repeat all', one:'Repeat one'}[loop];
   if(!player || !player.getVideoData) return;
   const d = player.getVideoData(), pl = player.getPlaylist() || [];
   if(d && d.title){ $('title').textContent = d.title; document.title = "U-tube-playlist"; }
@@ -132,7 +134,7 @@ $('pp').onclick = () => { if(!player) return; playing ? player.pauseVideo() : st
 $('next').onclick = () => player && player.nextVideo();
 $('prev').onclick = () => player && player.previousVideo();
 $('shuf').onclick = () => { shuffle = !shuffle; store.set('shuf', shuffle?'1':'0'); player && player.setShuffle(shuffle); if(shuffle && player) player.playVideoAt(0); sync(); };
-$('loop').onclick = () => { loop = !loop; store.set('loop', loop?'1':'0'); player && player.setLoop(loop); sync(); };
+$('loop').onclick = () => { loop = {off:'all', all:'one', one:'off'}[loop]; store.set('rep', loop); player && player.setLoop(loop !== 'off'); sync(); };
 if('mediaSession' in navigator){
   navigator.mediaSession.setActionHandler('nexttrack', () => player && player.nextVideo());
   navigator.mediaSession.setActionHandler('previoustrack', () => player && player.previousVideo());

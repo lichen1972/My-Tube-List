@@ -175,8 +175,9 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
   </div>
   <section class="form">
     <h2>New playlist app</h2>
-    <div class="field"><label for="nm">Name under the icon</label><input type="text" id="nm" maxlength="30" placeholder="e.g. HSK2 lessons"></div>
+    
     <div class="field"><label for="ln">YouTube playlist link</label><div class="inrow"><input type="text" id="ln" placeholder="Paste the playlist link" autocomplete="off"><button class="paste" id="pasteBtn" type="button">Paste</button></div></div>
+    <div class="field"><label for="nm">Name under the icon</label><input type="text" id="nm" maxlength="30" placeholder="e.g. HSK2 lessons"></div>
     <div class="field"><label>Icon color</label><div class="swatches" id="sws"></div></div>
     <p class="err" id="err"></p>
     <button class="cta" id="create">Create on this device</button>
@@ -268,9 +269,22 @@ function home(){
       }, 350));
     }
   });
+  // fill the name automatically from the playlist's own title (no typing needed)
+  async function autoName(){
+    const list = listFrom($('ln').value);
+    if(!list || $('nm').value.trim()) return;
+    $('nm').placeholder = 'Getting playlist name…';
+    const pl = encodeURIComponent('https://www.youtube.com/playlist?list=' + list);
+    for(const u of ['https://www.youtube.com/oembed?format=json&url=' + pl, 'https://noembed.com/embed?url=' + pl]){
+      try{ const j = await (await fetch(u)).json(); if(j.title){ if(!$('nm').value.trim()) $('nm').value = j.title.slice(0,30); break; } }catch{}
+    }
+    $('nm').placeholder = iosApp ? 'Tap to type' : 'e.g. HSK2 lessons';
+  }
+  $('ln').addEventListener('change', autoName);
   $('pasteBtn').onclick = async () => {
     try{ const t = await navigator.clipboard.readText(); if(t) $('ln').value = t.trim(); }
     catch{ const v = prompt('YouTube playlist link', $('ln').value); if(v !== null) $('ln').value = v.trim(); }
+    autoName();
   };
   const read = () => {
     const name = $('nm').value.trim(), list = listFrom($('ln').value);

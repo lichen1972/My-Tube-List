@@ -9,7 +9,6 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="My Tube" id="appTitle">
-<link rel="manifest" href="manifest.json" id="manifest">
 <link rel="apple-touch-icon" href="red-180.png" id="touchIcon">
 <link rel="icon" type="image/png" href="red-192.png" id="favicon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,16 +24,27 @@ const COLOR = COLORS[Q.get('c')] ? Q.get('c') : 'red';
 const BASE = new URL('./', location.href).href;
 const appUrl = (list, name, c) => BASE + '?list=' + encodeURIComponent(list) + '&name=' + encodeURIComponent(name) + '&c=' + c;
 document.documentElement.style.setProperty('--accent', COLORS[COLOR]);
+const FROM_HOME = Q.get('from') === 'home';
+const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const addManifest = href => { const l = document.createElement('link'); l.rel = 'manifest'; l.href = href; document.head.appendChild(l); };
 if (LIST) {
+  // clean address (no &from=home) so "Add to Home Screen" saves the playlist itself
+  if (FROM_HOME) history.replaceState(null, '', appUrl(LIST, NAME, COLOR));
   document.title = NAME;
   document.getElementById('appTitle').content = NAME;
   document.getElementById('touchIcon').href = COLOR + '-180.png';
   document.getElementById('favicon').href = COLOR + '-192.png';
-  const start = appUrl(LIST, NAME, COLOR);
-  const m = { id:start, name:NAME, short_name:NAME, start_url:start, scope:BASE, display:'standalone',
-    background_color:'#15121a', theme_color:'#15121a',
-    icons:[192,512].map(n => ({ src:BASE + COLOR + '-' + n + '.png', sizes:n+'x'+n, type:'image/png', purpose:'any' })) };
-  document.getElementById('manifest').href = URL.createObjectURL(new Blob([JSON.stringify(m)], {type:'application/manifest+json'}));
+  // iPhone/iPad: no manifest, so Safari saves THIS page (the playlist) with its own name and icon.
+  // Android/PC: a manifest made just for this playlist.
+  if (!IOS) {
+    const start = appUrl(LIST, NAME, COLOR);
+    const m = { id:start, name:NAME, short_name:NAME, start_url:start, scope:BASE, display:'standalone',
+      background_color:'#15121a', theme_color:'#15121a',
+      icons:[192,512].map(n => ({ src:BASE + COLOR + '-' + n + '.png', sizes:n+'x'+n, type:'image/png', purpose:'any' })) };
+    addManifest(URL.createObjectURL(new Blob([JSON.stringify(m)], {type:'application/manifest+json'})));
+  }
+} else {
+  addManifest('manifest.json');
 }
 </script>
 <style>
@@ -322,7 +332,7 @@ function app(){
   $('homeBtn').hidden = false;
   $('poster').src = COLOR + '-512.png';
   if(!standalone && !store.get('dismiss:' + LIST, false)) showInstall();
-  else if(standalone && Q.get('from') === 'home' && !store.get('dismiss:' + LIST, false)) showCopy();
+  else if(standalone && FROM_HOME && !store.get('dismiss:' + LIST, false)) showCopy();
   const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
   sync();
 }

@@ -43,11 +43,13 @@ if (LIST) {
   // iPhone/iPad: no manifest, so Safari saves THIS page (the playlist) with its own name and icon.
   // Android/PC: a manifest made just for this playlist.
   if (!IOS) {
-    const start = appUrl(LIST, NAME, COLOR), scope = BASE + 'p/' + LIST + '/';
-    const m = { id:scope, name:NAME, short_name:NAME, start_url:start, scope:scope, display:'standalone',
-      background_color:'#15121a', theme_color:'#15121a',
-      icons:[192,512].map(n => ({ src:BASE + COLOR + '-' + n + '.png', sizes:n+'x'+n, type:'image/png', purpose:'any' })) };
-    addManifest(URL.createObjectURL(new Blob([JSON.stringify(m)], {type:'application/manifest+json'})));
+    // Android/PC: this playlist's own app manifest. It is a real file address served by sw.js,
+    // so Chrome offers a proper "Install" (no Chrome badge on the icon).
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      addManifest(BASE + 'p/' + LIST + '/manifest.json?name=' + encodeURIComponent(NAME) + '&c=' + COLOR);
+    } else {
+      window.NEEDS_SW_RELOAD = true;   // first visit: sw.js takes over, then the page reloads once
+    }
   }
 } else {
   if (!location.pathname.endsWith('index.html')) history.replaceState(null, '', ROOT + 'index.html' + location.search);
@@ -479,7 +481,13 @@ if('mediaSession' in navigator){
 }
 
 LIST ? app() : home();
-if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if(window.NEEDS_SW_RELOAD) navigator.serviceWorker.addEventListener('controllerchange', () => {
+    try{ if(sessionStorage.getItem('swReload') === LIST) return; sessionStorage.setItem('swReload', LIST); }catch{}
+    location.reload();
+  });
+}
 </script>
 </body>
 </html>

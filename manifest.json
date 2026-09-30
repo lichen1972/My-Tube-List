@@ -1,14 +1,24 @@
 {
-  "id": "./",
+  "id": "./index.html",
   "name": "My Tube",
   "short_name": "My Tube",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "./index.html",
+  "scope": "./index.html",
   "display": "standalone",
   "background_color": "#1d1526",
   "theme_color": "#1d1526",
   "icons": [
-    {"src": "red-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "red-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+    {
+      "src": "red-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "red-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }

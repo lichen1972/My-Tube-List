@@ -153,8 +153,10 @@ svg{display:block}
 .field label{display:block;font-size:.85rem;font-weight:600;margin-bottom:6px}
 .field input[type=text]{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--line);color:var(--text);padding:13px 14px;border-radius:12px;font:inherit;font-size:16px}
 .field input[type=text]:focus{outline:none;border-color:var(--accent)}
-.swatches{display:flex;flex-wrap:wrap;gap:10px}
-.sw{position:relative}
+.swatches{display:flex;flex-wrap:wrap;gap:12px 8px}
+.sw{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:56px;text-align:center}
+.sw span{font-size:.7rem;color:var(--muted)}
+.sw input:checked~span{color:var(--text);font-weight:600}
 .sw input{position:absolute;opacity:0;pointer-events:none}
 .sw img{width:46px;height:46px;border-radius:12px;display:block;cursor:pointer;opacity:.55;transition:opacity .15s,transform .15s}
 .sw input:checked+img{opacity:1;transform:scale(1.08);box-shadow:0 0 0 2px var(--ink),0 0 0 4px var(--text)}
@@ -256,7 +258,7 @@ function listFrom(s){
 function home(){
   $('home').hidden = false;
   $('sws').innerHTML = Object.keys(COLORS).map((c,i) =>
-    `<label class="sw"><input type="radio" name="c" value="${c}" ${i?'':'checked'} aria-label="${c}"><img src="${c}-180.png" alt=""></label>`).join('');
+    `<label class="sw"><input type="radio" name="c" value="${c}" ${i?'':'checked'} aria-label="${c}"><img src="${c}-180.png" alt=""><span>${c[0].toUpperCase()+c.slice(1)}</span></label>`).join('');
   document.querySelectorAll('input[name=c]').forEach(r => r.onchange = () => document.documentElement.style.setProperty('--accent', COLORS[r.value]));
   let editing = false;
   $('editBtn').onclick = () => { editing = !editing; $('editBtn').textContent = editing ? 'Done' : 'Edit'; renderTiles(editing); };

@@ -111,6 +111,8 @@ svg{display:block}
 .tog[aria-pressed="true"]::after{content:"";position:absolute;bottom:4px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--accent)}
 .tog i{position:absolute;top:9px;right:7px;font:700 .6rem/1 var(--font);font-style:normal;background:var(--accent);color:var(--ink);border-radius:6px;padding:2px 4px}
 .msg{color:#ffb4a8;font-size:.85rem;min-height:1.3em;margin:4px 0 0;text-align:center}
+.ytbox{display:flex;justify-content:center;margin-top:8px}
+.ytbox a{text-decoration:none;display:inline-block}
 
 .queue{margin-top:22px}
 .queue h2{font-size:1.05rem;margin:0 0 8px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline}
@@ -232,6 +234,7 @@ svg{display:block}
     <button class="ib tog" id="loop" aria-label="Repeat" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg><i id="one" hidden>1</i></button>
   </div>
   <p class="msg" id="msg" role="status"></p>
+  <div class="ytbox" id="ytBox" hidden><a class="pill solid" id="ytLink" target="_blank" rel="noopener">Open in YouTube</a></div>
 
   <section class="queue">
     <h2>Up next <span id="count"></span></h2>
@@ -320,6 +323,7 @@ function renderTiles(editing){
 }
 
 /* ================= PLAYER ================= */
+let errCount = 0;
 let player, playing = false, curIdx = 0, ids = [], dragging = false;
 const K = 'set:' + LIST;
 let st = store.get(K, {shuffle:false, rep:'all'});
@@ -374,14 +378,25 @@ window.onYouTubeIframeAPIReady = () => {
     onReady: () => { player.setLoop(st.rep !== 'off'); if(st.shuffle) player.setShuffle(true); setTimeout(sync, 600); },
     onStateChange: e => {
       playing = e.data === YT.PlayerState.PLAYING;
-      if(playing){ $('cover').hidden = true; curIdx = player.getPlaylistIndex(); $('msg').textContent = ''; }
+      if(playing){ $('cover').hidden = true; curIdx = player.getPlaylistIndex(); $('msg').textContent = ''; $('ytBox').hidden = true; errCount = 0; }
       if(e.data === YT.PlayerState.ENDED && st.rep === 'one'){ player.playVideoAt(curIdx); return; }
       sync();
     },
     onError: e => {
-      $('msg').textContent = [100,101,150].includes(e.data)
-        ? 'Skipped a video that can’t play outside YouTube.' : 'Skipped a video (error ' + e.data + ').';
-      setTimeout(() => player.nextVideo(), 1200);
+      const blocked = [100,101,150,153].includes(e.data);
+      const i = player.getPlaylistIndex(), vid = (player.getPlaylist() || [])[i];
+      errCount++;
+      const total = (player.getPlaylist() || []).length || 1;
+      $('ytLink').href = vid ? 'https://www.youtube.com/watch?v=' + vid + '&list=' + LIST : 'https://www.youtube.com/playlist?list=' + LIST;
+      $('ytBox').hidden = false;
+      if(errCount >= Math.min(total, 5)){
+        // many videos in a row are blocked: stop skipping, send them to YouTube
+        $('msg').textContent = 'This playlist can’t play here. Open it in YouTube instead.';
+        $('ytLink').href = 'https://www.youtube.com/playlist?list=' + LIST;
+        return;
+      }
+      $('msg').textContent = blocked ? 'This video can’t play outside YouTube. Skipping…' : 'Skipped a video (error ' + e.data + ').';
+      setTimeout(() => player.nextVideo(), 2500);
     }
   }});
 };

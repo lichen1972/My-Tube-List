@@ -1,4 +1,4 @@
 # My Tube playlists — one per line:  Name | playlist link
 # Example:
 # HSK2 V | https://www.youtube.com/playlist?list=PLxxxxxxxx
-HSK1 | https://www.youtube.com/watch?v=cADmN8CU7HY&list=PLIjbKt31Fqf8&pp=sAgC
+HSK1 | blue | https://www.youtube.com/watch?v=cADmN8CU7HY&list=PLIjbKt31Fqf8&pp=sAgC

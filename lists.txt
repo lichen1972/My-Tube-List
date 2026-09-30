@@ -3,3 +3,4 @@
 # HSK2 V | https://www.youtube.com/playlist?list=PLxxxxxxxx
 HSK1 | green | https://www.youtube.com/watch?v=cADmN8CU7HY&list=PLIjbKt31Fqf8&pp=sAgC
 HSK2 | teal | https://www.youtube.com/playlist?list=PLR7IZ9y7zRN1t2hMnTHF-rsK4AINzdNSC
+Piano Repeat | orange | https://www.youtube.com/playlist?list=PLR7IZ9y7zRN004Tzgm0Lvy7dz5bOgqFgM
